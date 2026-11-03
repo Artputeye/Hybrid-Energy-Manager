@@ -23,6 +23,79 @@ float co2ReductionMonthlyKg = 0.0;
 float selfSufficiencyPct = 0.0;
 const float GRID_ON_THRESHOLD = 2.0;
 const float GRID_OFF_THRESHOLD = 1.0;
+
+static int daysInMonth(int year, int month)
+{
+    switch (month)
+    {
+    case 2:
+        return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) ? 29 : 28;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+        return 30;
+    default:
+        return (month >= 1 && month <= 12) ? 31 : 0;
+    }
+}
+
+static bool isMonthlyResetDate()
+{
+    if (gridCutOff < 1 || gridCutOff > 31 || gridStart < 1 || gridStart > 31)
+    {
+        return false;
+    }
+
+    if (gridCutOff <= gridStart)
+    {
+        return rtc.day == (gridCutOff + gridStart) / 2;
+    }
+
+    int anchorYear = rtc.year;
+    int anchorMonth = rtc.month;
+    if (rtc.day <= gridStart)
+    {
+        if (--anchorMonth == 0)
+        {
+            anchorMonth = 12;
+            --anchorYear;
+        }
+    }
+    else if (rtc.day < gridCutOff)
+    {
+        return false;
+    }
+
+    const int anchorMonthDays = daysInMonth(anchorYear, anchorMonth);
+    if (gridCutOff > anchorMonthDays)
+    {
+        return false;
+    }
+
+    const int daysBetween = anchorMonthDays - gridCutOff + gridStart;
+    const int midpointOffset = daysBetween / 2;
+    int resetYear = anchorYear;
+    int resetMonth = anchorMonth;
+    int resetDay;
+
+    if (midpointOffset <= anchorMonthDays - gridCutOff)
+    {
+        resetDay = gridCutOff + midpointOffset;
+    }
+    else
+    {
+        resetDay = midpointOffset - (anchorMonthDays - gridCutOff);
+        if (++resetMonth == 13)
+        {
+            resetMonth = 1;
+            ++resetYear;
+        }
+    }
+
+    return rtc.year == resetYear && rtc.month == resetMonth && rtc.day == resetDay;
+}
+
 //////////////////////////////////////////////////////////////////////////////////
 unsigned long lastQvalue = 0;
 unsigned long lastQrate = 0;
@@ -213,20 +286,19 @@ void gridOperation()
     // --------------------------------------------------------------------------
     // 🔹 Monthly Reset (คิดจากค่ากลางระหว่าง gridCutOff และ gridStart)
     // --------------------------------------------------------------------------
-    int monthlyResetDay = (gridCutOff + gridStart) / 2;
-    if (monthlyResetDay <= 0) monthlyResetDay = 1; // Default fallback เป็นวันที่ 1
-
     static bool clearedMonthly = false;
-    if (rtc.day == monthlyResetDay && rtc.hour == 0 && rtc.minute == 0 && !clearedMonthly)
+    const bool monthlyResetDue = isMonthlyResetDate() && rtc.hour == 0 && rtc.minute == 0;
+    if (monthlyResetDue && !clearedMonthly)
     {
-        Serial.printf("🗓️ Mid-point Day %d 00:00 detected — resetting monthly energy counters...\n", monthlyResetDay);
+        Serial.printf("🗓️ Mid-point %02d/%02d/%04d 00:00 detected — resetting monthly energy counters...\n",
+                      rtc.day, rtc.month, rtc.year);
         updateEnergyHistory(true);
         energy_m_kWh = 0.0;
         solar_m_kWh = 0.0;
         clearedMonthly = true;
         saveEnergyToFile();
     }
-    if (rtc.day != monthlyResetDay || rtc.hour != 0 || rtc.minute != 0)
+    if (!monthlyResetDue)
     {
         clearedMonthly = false;
     }
