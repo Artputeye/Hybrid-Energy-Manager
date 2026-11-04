@@ -1,4 +1,4 @@
-# ⚡ Hybrid Inverter
+# ⚡ Hybrid Energy Manager (HEM)
 
 > ESP32 Web UI & Controller สำหรับ Hybrid Solar Inverter — Monitoring, Energy Tracking, WebSocket, MQTT, Home Assistant และ OTA
 
@@ -80,7 +80,7 @@
 ## 📁 Project Structure
 
 ```text
-Hybrid-Inverter/
+Hybrid-Energy-Manager/
 ├── data/                  # Web UI / LittleFS
 ├── Json/                  # JSON / configuration
 ├── partitions/            # OTA partition table
@@ -242,4 +242,4 @@ pio run
 
 กำหนด License ของโปรเจกต์ตามความเหมาะสมก่อนเผยแพร่
 
-<p align="center"><sub>⚡ Hybrid Inverter • ESP32 • Solar Energy Monitoring & Control</sub></p>
+<p align="center"><sub>⚡ Hybrid Energy Manager • ESP32 • Solar Energy Monitoring & Control</sub></p>
